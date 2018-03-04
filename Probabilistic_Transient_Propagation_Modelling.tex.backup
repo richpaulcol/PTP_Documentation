@@ -1,6 +1,7 @@
 \documentclass[]{article}
  \usepackage{amsmath}
  \usepackage{amssymb}
+ \usepackage{mathdots}
 % \usepackage{amsthm}
 % \usepackage{textcomp}
  \parindent=0mm
@@ -24,7 +25,7 @@
 
 %\usepackage[round]{natbib}
 %
-
+\setcounter{MaxMatrixCols}{20}
 \usepackage[square,numbers,comma,sort&compress]{natbib}
 \usepackage{listings} 
 %\bibliographystyle{plainnat}
@@ -67,7 +68,7 @@ To apply the MOC to \eqref{TranEqns} we first multiply the momentum equation by 
 \begin{equation}
  \pdiff{H}{t}{} + \frac{a^2}{gA}\pdiff{Q}{x}{} + K \pdiff{H}{x}{} + K \frac{1}{gA}\pdiff{Q}{t}{} + K \frac{\lambda}{2 g DA^2}Q \abs{Q} = 0
 \end{equation}
-without explicitly going into why, if we set $K$ to be the wavespeed $a$, then we get the following:
+without explicitly going into why, if we set $K$ to be the wavespeed $a$, then we get the following:  (NOTE THIS ISN'T QUITE RIGHT CHECK WITH WYLIE AND STREETER)
 \begin{equation}
  \pdiff{H}{t}{} + a \pdiff{H}{x}{} + \frac{a}{gA}\left(\pdiff{Q}{t}{} + a \pdiff{Q}{x}{} \right) + \frac{a \lambda}{2 g DA^2}Q \abs{Q} = 0
 \end{equation}
@@ -80,13 +81,165 @@ this pair of equations is only valid along the lines when
  \diff{x}{t}{} = \pm a
 \end{equation}
 
+To simplify the calculations below we will rewrite the equation as:
+\begin{equation}
+ \diff{H}{t}{} \pm B \diff{Q}{t}{} \pm \frac{R}{\Delta x} Q \abs{Q} = 0
+\end{equation}
+with $B = \frac{a}{g A}$ and $R = \frac{\lambda \Delta x}{2 g D A^2}$.
+Note: that $R$ contains some modelling error.
+
 
 NEEDS A BIT IN HERE ABOUT HOW TO GET TO THE NEXT BIT
 
+\begin{figure}[htp]
+ \centering
+ \caption{Mesh discretisation for the MOC}
+ \label{MOCmesh}
+\end{figure}
+
+The equations need to be integrated along the lines AP and B, which is easy for the first pair of terms but becomes complicated for the final term.
+
+Once we have integrated along the two lines then we have the pair of equations:
+\begin{equation}\label{posChar}
+ H_P = C_p + B_p Q_P
+\end{equation}
+and
+\begin{equation}\label{negChar}
+ H_P = C_m + B_m Q_P
+\end{equation}
+
+with the constants of integration given by:
+\begin{equation}
+ \begin{split}
+  C_p &= H_A + Q_A \left(B - R \abs{Q_A} (1-\epsilon)\right) \\
+  B_p &= B + \epsilon R \abs{Q_A} \\
+  C_m &= H_B - Q_B \left(B - R \abs{Q_B} (1-\epsilon)\right) \\
+  B_m &= B + \epsilon R \abs{Q_B} \\ 
+ \end{split}
+\end{equation}
+
+we will explore the use of $\epsilon$ a little later.
+
+If we combine \eqref{posChar} and \eqref{negChar} we can generate equations that take the information from both the forward and backward characteristic for head and flow at the current point.
+\begin{equation}\label{BaseEqn}
+ \begin{split}
+  H_P &= \frac{B_m C_p + B_p C_m}{B_m + B_p} \\
+  Q_P &= \frac{C_p - C_m}{B_m + B_p} \\
+ \end{split}
+\end{equation}
+
+These two equations are the fundamental equations that we will use going forward. 
+$C_m$, $B_m$, $C_p$ and $B_p$ are functions of the flows and heads at the adjacent points.
+
 
 \section{Kalman Filter}
+STUFF HERE ON THE BACKGROUND TO THE KALMAN FILTER
 
-\section{Extended Kalman Filter}
+\begin{equation}
+\begin{split}
+ \mathbf{\hat{x}}_t &= \mathbf{F}_t \mathbf{\hat{x}}_{t-1} + \mathbf{B} \mathbf{u}_t + \mathbf{\hat{w}}_t \\
+ \mathbf{\hat{z}}_t &= \mathbf{H}_t \mathbf{\hat{x}}_t + \mathbf{\hat{v}}_t \\
+\end{split}
+\end{equation}
+
+\subsection{Ability to use the Kalman Filter to model the transient equations}
+As mentioned above the Kalman filter can be used to model linear dynamic models, however the transient equations are non-linear.
+Therefore we will have to do some linearisation to make the equations suitable to be modelled in this way.
+There are a number of approaches that will work, see Section \ref{EKF} for a more general approach, however here we will use a simpler technique.
+If we look at the original equations \eqref{TranEqns} we see that, if we assume $A$, $D$, $a$ and $\lambda$ are constants, the only non-linearity is in the flow in the final term of the momentum equation.
+Therefore if we can linearise this then the equation will be linear and suitable for modelling with the Kalman Filter.
+
+If we assume that the changes in flow rate during the transient are small, and the flow rate  remains close to the original flow rate then we can say that:
+\begin{equation}
+ Q\abs{Q} \approx Q Q_0
+\end{equation}
+where $Q_0$ is the initial flow at the start of the simulation.
+$Q_0$ obviously remains a constant and the equations are now linear.
+\begin{equation}\label{TranEqnsLinear}
+ \begin{split}
+ \pdiff{H}{t}{} + \frac{a^2}{gA}\pdiff{Q}{x}{} &= 0 \\
+\pdiff{H}{x}{} + \frac{1}{gA}\pdiff{Q}{t}{} + \frac{\lambda Q_0}{2 g DA^2}Q &= 0
+ \end{split}
+\end{equation}
+
+If we apply the MOC to this pair of equations, we again get \eqref{BaseEqn}, however the characteristics are slightly modified.
+\begin{equation}
+ \begin{split}
+  C_p &= H_A +  B Q_A - R Q_A Q_0 \\
+  B_p &= B \\
+  C_m &= H_B - B Q_B + R Q_B Q_0\\
+  B_m &= B  \\ 
+ \end{split}
+\end{equation}
+
+The full equations for predicting the head and flow rate at $P$ are simple enough to be worth writing out in full.
+\begin{equation}\label{LinearH}
+ H_P = \frac{1}{2} \left[H_A +  H_B + \left(-R Q_0 + B \right)Q_A + \left(R Q_0 - B\right) Q_B \right]
+\end{equation}
+and
+\begin{equation}\label{LinearQ}
+ Q_P = \frac{1}{2} \left[\frac{H_A}{B} + \frac{H_B}{B} + \left(1-\frac{R Q_0}{B} \right)Q_A + \left(1-\frac{R Q_0}{B}\right)Q_B    \right]
+\end{equation}
+
+We can rewrite this is a more Kalman filter type way:
+\begin{equation}
+\begin{split}
+ \mathbf{x}_{h,t} &= \frac{1}{2} \left[ \mathbf{x}_{h-1,t-1} +   \mathbf{x}_{h+1,t-1} \left(-R Q_0 + B \right) \mathbf{x}_{q-1,t-1} + \left(R Q_0 - B\right)  \mathbf{x}_{q+1,t-1} \right]\\
+  \mathbf{x}_{q,t} &= \frac{1}{2} \left[\frac{\mathbf{x}_{h-1,t-1}}{B} + \frac{\mathbf{x}_{h+1,t-1}}{B} + \left(1-\frac{R Q_0}{B} \right)\mathbf{x}_{q-1,t-1} + \left(1-\frac{R Q_0}{B}\right)\mathbf{x}_{q+1,t-1}    \right]
+ \end{split}
+\end{equation}
+where $h$ is now the position in the state vector corresponding to the head at $P$ and $q$ is the position corresponding to the flow rate at $P$.
+
+
+The construction of the dynamics matrix can then be seen to be:
+\begin{equation}
+\begin{bmatrix}
+\vdots \\
+ x_{h-1} \\
+ x_{h} \\
+ x_{h+1} \\
+ \vdots \\
+  x_{q-1} \\
+ x_{q} \\
+ x_{q+1} \\
+  \vdots
+\end{bmatrix}_t
+=
+\begin{bmatrix}
+\ddots & \dots& \dots& \dots& \dots& \dots& \dots&\dots &\iddots\\
+\dots 0 & \frac{1}{2}& 0 & \frac{1}{2} & 0 \dots0&  \frac{1}{2}\left(-R Q_0 + B \right) & 0 & \frac{1}{2}\left(R Q_0 - B\right)&0\dots \\ 
+\vdots & \vdots& \vdots& \vdots& \vdots& \vdots& \vdots& \vdots& \vdots\\
+\dots 0 & \frac{1}{2 B} &0& \frac{1}{2 B} & 0  \dots 0  & \frac{1}{2} \left(1-\frac{R Q_0}{B} \right) & 0 & \frac{1}{2} \left(1-\frac{R Q_0}{B} \right) & 0\dots\\
+\iddots & \dots& \dots& \dots& \dots& \dots& \dots &\dots &\ddots\\
+\end{bmatrix}
+\begin{bmatrix}
+\vdots \\
+ x_{h-1} \\
+ x_{h} \\
+ x_{h+1} \\
+ \vdots \\
+  x_{q-1} \\
+ x_{q} \\
+ x_{q+1} \\
+  \vdots
+\end{bmatrix}_{t-1}
+\end{equation}
+which is a nicely sparse matrix.
+
+\subsection{How Gaussian are the uncertainties?}
+Kalman filters only really work with Gaussian uncertainty (noise). 
+So there is a question of how close to Gaussian are any uncertainties.
+If we look at \eqref{LinearH} and \eqref{LinearQ} we can see that aswell as uncertainty in the state we need to account for uncertainty in $R$ and $B$.
+
+\begin{equation}
+ B = \frac{a}{g A}
+\end{equation}
+\begin{equation}
+ R = \frac{\lambda \Delta x}{2 g D A^2}
+\end{equation}
+
+
+\section{Extended Kalman Filter}\label{EKF}
 Note that the full transient equations are non-linear so the standard Kalman filter approach is unavailable. 
 Instead we have to use the extended Kalman filter which uses the Jacobian of the evolution equations to approximate the evolution of the system covariance. 
 
@@ -96,12 +249,12 @@ Here we include the Extended Kalman Filter Equations.
 The basic equation relies on the ability to formulate the problem into a way which allows the next state of the system is only a function of the previous state, some control inputs (which we will not consider for now) and some uncertainty.
 \begin{equation}
 \begin{split}
- \mathbf{\hat{x}}_t &= f(\mathbf{\hat{x}_{t-1}}) + \mathbf{\hat{w}}_t \\
- \mathbf{\hat{z}}_t &= h(\mathbf{\hat{x}_t}) + \mathbf{\hat{v}}_t \\
+ \mathbf{\hat{x}}_t &= f(\mathbf{\hat{x}}_{t-1}) + \mathbf{\hat{w}}_t \\
+ \mathbf{\hat{z}}_t &= h(\mathbf{\hat{x}}_t) + \mathbf{\hat{v}}_t \\
 \end{split}
 \end{equation}
 
-where $f(\cdot)$ and $h(\cdot)$ are some, potentially, nonlinear mappings of the evolution of the state and the measurements, and $w$ and $v$ are the zero-mean Gaussian noise vectors. 
+where $f(\cdot)$ and $h(\cdot)$ are some, potentially, non-linear mappings of the evolution of the state and the measurements, and $w$ and $v$ are the zero-mean Gaussian noise vectors. 
 The state evolution can be calculated in what ever non-linear way is most appropriate, i.e. by a matrix method, or any other technique. 
 \begin{equation}
  \mathbf{\hat{x}}_t = f(\mathbf{\hat{x}_{t-1}})
