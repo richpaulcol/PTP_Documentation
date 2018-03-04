@@ -234,6 +234,7 @@ If we look at \eqref{LinearH} and \eqref{LinearQ} we can see that aswell as unce
 \begin{equation}
  B = \frac{a}{g A}
 \end{equation}
+
 \begin{equation}
  R = \frac{\lambda \Delta x}{2 g D A^2}
 \end{equation}
