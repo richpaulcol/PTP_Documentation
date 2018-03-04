@@ -1,0 +1,129 @@
+\documentclass[]{article}
+ \usepackage{amsmath}
+ \usepackage{amssymb}
+% \usepackage{amsthm}
+% \usepackage{textcomp}
+ \parindent=0mm
+ \parskip=2.5mm
+% \parindent=0mm
+% \renewcommand{\arraystretch}{1.35}
+% \usepackage{cite}
+
+%\usepackage[acronym,nonumberlist]{glossaries}
+%\makeglossaries 
+\usepackage{graphicx}
+\graphicspath{{Figures/}}
+\usepackage[small,bf,up]{caption}
+\providecommand{\diff}[3]{\frac{d^{#3} #1}{d #2^{#3}}}
+\providecommand{\pdiff}[3]{\frac{\partial^{#3} #1}{\partial #2^{#3}}}
+\providecommand{\abs}[1]{\left \lvert#1\right \rvert}
+\providecommand{\etal}[0]{\textit{et al. }}
+\oddsidemargin 15mm                        % 1 inch + lefthand margin on odd numbered pages
+\evensidemargin 15mm                       % 1 inch + lefthand margin on even numbered pages
+\textwidth 145mm  
+
+%\usepackage[round]{natbib}
+%
+
+\usepackage[square,numbers,comma,sort&compress]{natbib}
+\usepackage{listings} 
+%\bibliographystyle{plainnat}
+\bibliographystyle{unsrt}
+%\usepackage{nomencl}
+%\nomlabelwidth=15mm
+%\makeindex
+%\makenomenclature
+
+\date{\today}
+\title{Probabilistic Transient Propagation (PTP), Background and Mathematics}
+
+\author{Richard Collins}
+
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+ 
+\end{abstract}
+
+\section{Transient Equations}
+Here we are going to model the basic transient equations, 
+\begin{equation}\label{TranEqns}
+ \begin{split}
+ \pdiff{H}{t}{} + \frac{a^2}{gA}\pdiff{Q}{x}{} &= 0 \\
+\pdiff{H}{x}{} + \frac{1}{gA}\pdiff{Q}{t}{} + \frac{\lambda}{2 g DA^2}Q \abs{Q} &= 0
+ \end{split}
+\end{equation}
+
+These are a pair of coupled non-linear hyperbolic partial differential equations that describe the change in head and flow along a pipe.
+They need to be coupled with suitable, initial and boundary conditions to complete the solution.
+
+\section{Method of Characteristics}
+The standard solution technique for solving \eqref{TranEqns} numerical is to use the Method of Characteristics (MOC).  
+The MOC converts the partial differential equations into ordinary differential equations along characteristic lines in the solution space, along which the information about changes flows.
+To apply the MOC to \eqref{TranEqns} we first multiply the momentum equation by a currently unknown factor $K$, then add the two equations together:
+\begin{equation}
+ \pdiff{H}{t}{} + \frac{a^2}{gA}\pdiff{Q}{x}{} + K \pdiff{H}{x}{} + K \frac{1}{gA}\pdiff{Q}{t}{} + K \frac{\lambda}{2 g DA^2}Q \abs{Q} = 0
+\end{equation}
+without explicitly going into why, if we set $K$ to be the wavespeed $a$, then we get the following:
+\begin{equation}
+ \pdiff{H}{t}{} + a \pdiff{H}{x}{} + \frac{a}{gA}\left(\pdiff{Q}{t}{} + a \pdiff{Q}{x}{} \right) + \frac{a \lambda}{2 g DA^2}Q \abs{Q} = 0
+\end{equation}
+The total derivative of a function $f(x,t)$ w.r.t time is given by $\pdiff{f}{t}{} + \diff{x}{t}{}\pdiff{f}{x}{}$ so we can see that we have formed a series of total derivatives.
+\begin{equation}
+ \diff{H}{t}{} \pm \frac{a}{gA}\diff{Q}{t}{} \pm \frac{a \lambda}{2 g DA^2}Q \abs{Q} = 0
+\end{equation}
+this pair of equations is only valid along the lines when 
+\begin{equation}
+ \diff{x}{t}{} = \pm a
+\end{equation}
+
+
+NEEDS A BIT IN HERE ABOUT HOW TO GET TO THE NEXT BIT
+
+
+\section{Kalman Filter}
+
+\section{Extended Kalman Filter}
+Note that the full transient equations are non-linear so the standard Kalman filter approach is unavailable. 
+Instead we have to use the extended Kalman filter which uses the Jacobian of the evolution equations to approximate the evolution of the system covariance. 
+
+
+Here we include the Extended Kalman Filter Equations. 
+
+The basic equation relies on the ability to formulate the problem into a way which allows the next state of the system is only a function of the previous state, some control inputs (which we will not consider for now) and some uncertainty.
+\begin{equation}
+\begin{split}
+ \mathbf{\hat{x}}_t &= f(\mathbf{\hat{x}_{t-1}}) + \mathbf{\hat{w}}_t \\
+ \mathbf{\hat{z}}_t &= h(\mathbf{\hat{x}_t}) + \mathbf{\hat{v}}_t \\
+\end{split}
+\end{equation}
+
+where $f(\cdot)$ and $h(\cdot)$ are some, potentially, nonlinear mappings of the evolution of the state and the measurements, and $w$ and $v$ are the zero-mean Gaussian noise vectors. 
+The state evolution can be calculated in what ever non-linear way is most appropriate, i.e. by a matrix method, or any other technique. 
+\begin{equation}
+ \mathbf{\hat{x}}_t = f(\mathbf{\hat{x}_{t-1}})
+\end{equation}
+however the covariance matrices are calculated using:
+\begin{equation}
+ \mathbf{P}_t = \mathbf{F}_{k-1} \mathbf{P}_{t-1} \mathbf{F}_{k-1}^T + \mathbf{Q}_{t-1}
+\end{equation}
+
+where $\mathbf{F}$ is the Jacobian matrix of the function $f(\cdot)$
+\begin{equation}
+ \mathbf{F} = \pdiff{f}{\mathbf{\hat{x}}}{}
+\end{equation}
+
+
+\subsection{Calculation of the Jacobian}
+To calculate the Jacobian of the evolution equation we first need to determine our state vectors and actually what our state evolution equations are:
+
+\subsubsection{State Vector}
+In this formulation the state vector is composed of the Heads and flows at each nodal position, however due to the non-linearity we also need to include the pipe diameter, friction factor (and possibly the pipe wave speed) on each pipe reach between nodes.  
+If the number of Nodes in the model is $N$, the size of our state vector (not including wavespeed) will be $2N + 2(N-1) = 4N -2$, (or $5N-3$ if wave speed is included).
+
+
+
+\end{document}
